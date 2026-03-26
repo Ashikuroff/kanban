@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   DragOverEvent,
   DragOverlay,
   DragStartEvent,
+  DragEndEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -64,11 +65,17 @@ export default function KanbanBoard() {
   const [newCardDetails, setNewCardDetails] = useState('');
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
   const [newColumnName, setNewColumnName] = useState('');
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Prevent hydration mismatch by only showing stored data after hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3,
+        distance: 8, // Increased from 3 to prevent accidental drags
       },
     })
   );
@@ -80,7 +87,14 @@ export default function KanbanBoard() {
   };
 
   const handleDragOver = (event: DragOverEvent) => {
+    // handleDragOver can be used for visual feedback during drag
+    // but the actual move logic will be in handleDragEnd
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveCard(null);
+
     if (!over) return;
 
     const activeId = active.id as string;
@@ -88,80 +102,48 @@ export default function KanbanBoard() {
 
     if (activeId === overId) return;
 
-    const isActiveACard = findCard(activeId);
-    const isOverACard = findCard(overId);
+    const activeCard = findCard(activeId);
+    if (!activeCard) return;
 
-    if (!isActiveACard) return;
+    const overCard = findCard(overId);
+    const overColumn = overCard ? findColumn(overCard) : findColumnById(overId);
 
-    // Dropping a card over another card
-    if (isActiveACard && isOverACard) {
-      setColumns((columns) => {
-        const activeColumn = findColumn(isActiveACard);
-        const overColumn = findColumn(isOverACard);
+    if (!overColumn) return;
 
-        if (!activeColumn || !overColumn) return columns;
+    const activeColumn = findColumn(activeCard);
+    if (!activeColumn) return;
 
-        if (activeColumn.id !== overColumn.id) {
-          // Move card to different column
-          const activeCards = activeColumn.cards.filter((card) => card.id !== activeId);
-          const overCards = overColumn.cards.filter((card) => card.id !== overId);
+    // If dropping on the same column and no specific card, do nothing
+    if (activeColumn.id === overColumn.id && !overCard) return;
 
-          const overIndex = overCards.findIndex((card) => card.id === overId);
-          overCards.splice(overIndex, 0, isActiveACard);
+    setColumns((columns) => {
+      const newColumns = [...columns];
 
-          return columns.map((column) => {
-            if (column.id === activeColumn.id) {
-              return { ...column, cards: activeCards };
-            }
-            if (column.id === overColumn.id) {
-              return { ...column, cards: overCards };
-            }
-            return column;
-          });
-        } else {
-          // Reorder within same column
-          const cards = activeColumn.cards;
-          const oldIndex = cards.findIndex((card) => card.id === activeId);
-          const newIndex = cards.findIndex((card) => card.id === overId);
+      // Remove from active column
+      const activeColumnIndex = newColumns.findIndex(col => col.id === activeColumn.id);
+      const activeColumnData = newColumns[activeColumnIndex];
+      const updatedActiveCards = activeColumnData.cards.filter(card => card.id !== activeId);
 
-          const newCards = [...cards];
-          newCards.splice(oldIndex, 1);
-          newCards.splice(newIndex, 0, isActiveACard);
+      // Add to target column
+      const overColumnIndex = newColumns.findIndex(col => col.id === overColumn.id);
+      const overColumnData = newColumns[overColumnIndex];
+      const updatedOverCards = [...overColumnData.cards];
 
-          return columns.map((column) =>
-            column.id === activeColumn.id ? { ...column, cards: newCards } : column
-          );
-        }
-      });
-    }
+      if (overCard) {
+        // Insert at specific position
+        const overIndex = updatedOverCards.findIndex(card => card.id === overId);
+        updatedOverCards.splice(overIndex, 0, activeCard);
+      } else {
+        // Add to end
+        updatedOverCards.push(activeCard);
+      }
 
-    // Dropping a card over a column
-    const isOverAColumn = findColumnById(overId);
-    if (isActiveACard && isOverAColumn) {
-      setColumns((columns) => {
-        const activeColumn = findColumn(isActiveACard);
-        if (!activeColumn) return columns;
+      // Update columns
+      newColumns[activeColumnIndex] = { ...activeColumnData, cards: updatedActiveCards };
+      newColumns[overColumnIndex] = { ...overColumnData, cards: updatedOverCards };
 
-        if (activeColumn.id === isOverAColumn.id) return columns;
-
-        const activeCards = activeColumn.cards.filter((card) => card.id !== activeId);
-        const overCards = [...isOverAColumn.cards, isActiveACard];
-
-        return columns.map((column) => {
-          if (column.id === activeColumn.id) {
-            return { ...column, cards: activeCards };
-          }
-          if (column.id === isOverAColumn.id) {
-            return { ...column, cards: overCards };
-          }
-          return column;
-        });
-      });
-    }
-  };
-
-  const handleDragEnd = () => {
-    setActiveCard(null);
+      return newColumns;
+    });
   };
 
   const findCard = (id: string): CardType | undefined => {
@@ -283,7 +265,7 @@ export default function KanbanBoard() {
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 p-4 bg-gray-100 min-h-screen">
-        {columns.map((column) => (
+        {(isHydrated ? columns : initialColumns).map((column) => (
           <Column
             key={column.id}
             column={column}
