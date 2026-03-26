@@ -55,24 +55,27 @@ kanban/
 
 ### Core Functionality
 - **5 Fixed Columns**: To Do, In Progress, Review, Testing, Done (all renamable)
-- **Drag & Drop**: Intuitive card movement between columns using @dnd-kit
+- **Smooth Drag & Drop**: Optimized card movement with 8px activation distance to prevent accidental drags
 - **Card Management**: Create, edit, delete, and mark cards as completed
-- **Persistent Storage**: Automatic localStorage saving and restoration
+- **Persistent Storage**: Automatic localStorage saving with SSR hydration safety
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Dummy Data**: Application loads with pre-populated sample tasks
 
 ### User Experience
 - **Modal Dialogs**: Professional forms for adding/editing cards and renaming columns
-- **Visual Feedback**: Completed cards show distinct styling with checkmarks
-- **Confirmation Prompts**: Prevents accidental deletions
-- **Accessibility**: ARIA labels and keyboard navigation support
-- **Real-time Updates**: Instant UI updates with state persistence
+- **Visual Feedback**: Completed cards show distinct styling with checkmarks and line-through
+- **Confirmation Prompts**: Prevents accidental deletions with browser confirmation
+- **Accessibility**: Full ARIA labels, keyboard navigation, and semantic HTML
+- **Real-time Updates**: Instant UI updates with automatic state persistence
+- **Double-Click Edit**: Intuitive card editing with double-click activation
 
 ### Technical Features
 - **TypeScript**: Full type safety throughout the application
-- **Modern React**: Hooks-based architecture with custom hooks
-- **Testing**: Jest and React Testing Library setup
-- **ESLint**: Code quality enforcement
-- **SSR Compatible**: Server-side rendering support with Next.js
+- **Modern React**: Hooks-based architecture with custom hooks for localStorage
+- **Comprehensive Testing**: 13+ unit tests with Jest and React Testing Library
+- **ESLint**: Strict code quality enforcement
+- **SSR Compatible**: Full server-side rendering support with hydration mismatch prevention
+- **Production Ready**: Optimized build with Turbopack for fast development iteration
 
 ## 🎨 Design System
 
@@ -110,15 +113,24 @@ kanban/
 5. **Delete Cards**: Click the "✕" button (with confirmation)
 6. **Rename Columns**: Click on column headers to rename
 
+### Known Issues & Resolutions
+- **Hydration Mismatch**: Fixed by implementing SSR-safe state initialization with post-hydration data switching
+- **Accidental Drag**: Resolved with 8px PointerSensor activation constraint
+- **Modal Visibility**: Proper state management ensures clean modal lifecycle
+
 ### Keyboard Shortcuts
 - **Tab**: Navigate through interactive elements
 - **Enter/Space**: Activate buttons and checkboxes
-- **Escape**: Close modals
+- **Escape**: Close modals and revert changes
+- **Double-Click**: Edit card (on card element)
+- **Drag Activation**: 8px minimum distance to avoid accidental drags
 
 ### Data Persistence
 - All changes are automatically saved to browser localStorage
 - Data persists across browser sessions and page refreshes
 - No data loss on accidental page closure
+- SSR-safe hydration ensures no console errors on page load
+- Initial dummy data loads on first app launch
 
 ## 🧪 Testing
 
@@ -128,11 +140,24 @@ cd frontend
 npm test
 ```
 
-### Test Coverage
-- Component rendering and interactions
-- Modal functionality
-- Card display and state management
-- Custom hooks behavior
+### Test Coverage (13 Tests Passing)
+The test suite includes:
+- **KanbanBoard Component** (10 tests):
+  - Column and card rendering
+  - Add/edit/delete card functionality
+  - Card completion toggling
+  - Column renaming
+  - Drag-and-drop initialization
+  - SSR hydration compatibility
+- **Modal Component** (1 test):
+  - Modal rendering and visibility
+- **Card Component** (1 test):
+  - Card title and details display
+
+### Testing Tools
+- **Jest**: Test runner and assertion library
+- **React Testing Library**: User-centric component testing
+- **@testing-library/jest-dom**: Custom matchers for DOM testing
 
 ## 🚢 Deployment
 
