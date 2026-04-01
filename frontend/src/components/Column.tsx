@@ -1,50 +1,39 @@
 'use client';
 
-import { useDroppable } from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
 import { Column as ColumnType, Card as CardType } from '../types';
-import { SortableCard } from './SortableCard';
 
 interface ColumnProps {
   column: ColumnType;
-  onAddCard: (columnId: string) => void;
+  cards: CardType[];
+  onAddCard: (title: string, details: string) => void;
   onDeleteCard: (cardId: string) => void;
-  onRenameColumn: (columnId: string) => void;
-  onEditCard: (card: CardType) => void;
-  onToggleCompleted: (cardId: string) => void;
 }
 
-export function Column({ column, onAddCard, onDeleteCard, onRenameColumn, onEditCard, onToggleCompleted }: ColumnProps) {
-  const { setNodeRef } = useDroppable({
-    id: column.id,
-  });
-
+export function Column({ column, cards, onAddCard, onDeleteCard }: ColumnProps) {
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 w-80 flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h2
-          className="text-lg font-semibold text-dark-navy cursor-pointer"
-          onClick={() => onRenameColumn(column.id)}
-        >
-          {column.name}
-        </h2>
-        <button
-          onClick={() => onAddCard(column.id)}
-          className="bg-purple-secondary text-white px-2 py-1 rounded text-sm hover:bg-opacity-80"
-        >
-          + Add Card
-        </button>
+    <div className="border rounded-lg p-4">
+      <h2 className="text-lg font-semibold text-dark-navy mb-4">{column.title}</h2>
+      <div className="space-y-2 min-h-[100px]">
+        {cards.map(card => (
+          <Card
+            key={card.id}
+            card={card}
+            onDeleteCard={onDeleteCard}
+          />
+        ))}
       </div>
-      <div ref={setNodeRef} className="flex-1 min-h-32">
-        <SortableContext items={column.cards.map(card => card.id)} strategy={verticalListSortingStrategy}>
-          {column.cards.map((card) => (
-            <SortableCard key={card.id} card={card} onDelete={onDeleteCard} onEdit={onEditCard} onToggleCompleted={onToggleCompleted} />
-          ))}
-        </SortableContext>
-      </div>
+      <button
+        onClick={() => {
+          const title = prompt('Enter card title:');
+          const details = prompt('Enter card details:');
+          if (title !== null && details !== null && title.trim() !== '') {
+            onAddCard(title.trim(), details.trim());
+          }
+        }}
+        className="mt-2 w-full bg-purple-secondary text-white text-sm px-3 py-1 rounded hover:bg-opacity-80"
+      >
+        Add Card
+      </button>
     </div>
   );
 }
