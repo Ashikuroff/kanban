@@ -7,12 +7,27 @@ import {
   DragOverlay,
   DragStartEvent,
   DragEndEvent,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
 } from '@dnd-kit/core';
+import {
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { Column } from './Column';
 import { Card } from './Card';
 
 export default function KanbanBoard() {
   const { state, dispatch } = useBoard();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
     // For now, we don't need to track active card during drag
@@ -25,12 +40,47 @@ export default function KanbanBoard() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    // For now, we don't implement drag and drop functionality
-    // This will be implemented in Phase 2
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Check if we're dropping on a column
+    const isOverColumn = state.columns.some(col => col.id === overId);
+    const isOverCard = state.cards.some(card => card.id === overId);
+
+    if (isOverColumn) {
+      // Dropping on a column - move to the end of that column
+      const targetColumnId = overId;
+      const cardsInTargetColumn = state.cards.filter(card => card.columnId === targetColumnId);
+      const newIndex = cardsInTargetColumn.length;
+
+      dispatch({
+        type: 'MOVE_CARD',
+        payload: { cardId: activeId, newColumnId: targetColumnId, newIndex }
+      });
+    } else if (isOverCard) {
+      // Dropping on a card - insert at that position
+      const overCard = state.cards.find(card => card.id === overId);
+      if (!overCard) return;
+
+      const targetColumnId = overCard.columnId;
+      const cardsInTargetColumn = state.cards.filter(card => card.columnId === targetColumnId);
+      const overIndex = cardsInTargetColumn.findIndex(card => card.id === overId);
+
+      dispatch({
+        type: 'MOVE_CARD',
+        payload: { cardId: activeId, newColumnId: targetColumnId, newIndex: overIndex }
+      });
+    }
   };
 
   return (
     <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
