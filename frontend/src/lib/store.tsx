@@ -1,7 +1,8 @@
+'use client';
+
 import React, { createContext, useContext, useReducer } from 'react';
 import type { BoardState, Column, Card } from '../types';
-
-'use client';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export const initialState: BoardState = {
   columns: [
@@ -41,6 +42,39 @@ export function boardReducer(state: BoardState, action: any): BoardState {
         cards: state.cards.filter(card => card.id !== action.payload)
       };
 
+    case 'MOVE_CARD':
+      const { cardId, newColumnId, newIndex } = action.payload;
+      const cardToMove = state.cards.find(card => card.id === cardId);
+      if (!cardToMove) return state;
+
+      // Remove card from current position
+      const filteredCards = state.cards.filter(card => card.id !== cardId);
+
+      // Update card's column and order
+      const updatedCard = { ...cardToMove, columnId: newColumnId, order: newIndex };
+
+      // Insert card at new position
+      const cardsInNewColumn = filteredCards.filter(card => card.columnId === newColumnId);
+      const updatedCardsInNewColumn = [
+        ...cardsInNewColumn.slice(0, newIndex),
+        updatedCard,
+        ...cardsInNewColumn.slice(newIndex)
+      ];
+
+      // Update order for all cards in the new column
+      const finalCardsInNewColumn = updatedCardsInNewColumn.map((card, index) => ({
+        ...card,
+        order: index
+      }));
+
+      // Combine with cards from other columns
+      const otherCards = filteredCards.filter(card => card.columnId !== newColumnId);
+
+      return {
+        ...state,
+        cards: [...otherCards, ...finalCardsInNewColumn]
+      };
+
     default:
       return state;
   }
@@ -49,7 +83,11 @@ export function boardReducer(state: BoardState, action: any): BoardState {
 const BoardContext = createContext<{ state: BoardState; dispatch: React.Dispatch<any> } | null>(null);
 
 export function BoardProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(boardReducer, initialState);
+  const [state, setState] = useLocalStorage<BoardState>('kanban-board', initialState);
+
+  const dispatch = (action: any) => {
+    setState(currentState => boardReducer(currentState, action));
+  };
 
   return (
     <BoardContext.Provider value={{ state: state, dispatch: dispatch }}>
