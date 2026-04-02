@@ -2,6 +2,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import KanbanBoard from '../components/KanbanBoard'
 import { Card as CardType, Column as ColumnType } from '../types'
+import { BoardProvider } from '../lib/store'
+
+// Test wrapper with BoardProvider
+const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+  <BoardProvider>{children}</BoardProvider>
+)
 
 // Mock localStorage
 const localStorageMock = {
@@ -50,7 +56,7 @@ describe('KanbanBoard', () => {
   })
 
   it('renders all columns and cards', () => {
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     expect(screen.getByText('To Do')).toBeInTheDocument()
     expect(screen.getByText('In Progress')).toBeInTheDocument()
@@ -61,7 +67,7 @@ describe('KanbanBoard', () => {
 
   it('opens add card modal when add button is clicked', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const addButtons = screen.getAllByText('+ Add Card')
     await user.click(addButtons[0])
@@ -71,7 +77,7 @@ describe('KanbanBoard', () => {
 
   it('adds a new card when form is submitted', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const addButtons = screen.getAllByText('+ Add Card')
     await user.click(addButtons[0])
@@ -91,7 +97,7 @@ describe('KanbanBoard', () => {
 
   it('opens edit modal when card is double-clicked', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const cards = screen.getAllByText('Design UI')
     await user.dblClick(cards[0])
@@ -102,7 +108,7 @@ describe('KanbanBoard', () => {
 
   it('edits a card when form is submitted', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const cards = screen.getAllByText('Design UI')
     await user.dblClick(cards[0])
@@ -121,7 +127,7 @@ describe('KanbanBoard', () => {
 
   it('deletes a card when delete button is clicked and confirmed', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const deleteButtons = screen.getAllByLabelText(/Delete card:/)
     await user.click(deleteButtons[0])
@@ -133,7 +139,7 @@ describe('KanbanBoard', () => {
 
   it('toggles card completion when checkbox is clicked', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const checkboxes = screen.getAllByRole('checkbox')
     await user.click(checkboxes[0])
@@ -144,7 +150,7 @@ describe('KanbanBoard', () => {
 
   it('opens rename column modal when column title is clicked', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const columnTitles = screen.getAllByRole('heading', { level: 2 })
     await user.click(columnTitles[0])
@@ -154,7 +160,7 @@ describe('KanbanBoard', () => {
 
   it('renames a column when form is submitted', async () => {
     const user = userEvent.setup()
-    render(<KanbanBoard />)
+    render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const columnTitles = screen.getAllByRole('heading', { level: 2 })
     await user.click(columnTitles[0])
@@ -177,7 +183,7 @@ describe('KanbanBoard', () => {
 
   it('renders initial columns during SSR and stored columns after hydration', () => {
     // This test verifies hydration behavior - simplified version
-    render(<KanbanBoard />);
+    render(<KanbanBoard />, { wrapper: TestWrapper });
 
     // Should render with initial data
     expect(screen.getByText('To Do')).toBeInTheDocument();
