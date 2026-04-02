@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import KanbanBoard from '../components/KanbanBoard'
 import { Card as CardType, Column as ColumnType } from '../types'
-import { BoardProvider } from '../lib/store'
+import { BoardProvider } from '../lib/store.tsx'
 
 // Test wrapper with BoardProvider
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -27,6 +27,13 @@ jest.mock('../hooks/useLocalStorage', () => ({
     return [value, setValue]
   })
 }))
+
+// Mock window.prompt for add card functionality
+window.prompt = jest.fn((titlePrompt, detailsPrompt) => {
+  if (titlePrompt === 'Enter card title:') return 'Test Card';
+  if (detailsPrompt === 'Enter card details:') return 'Test card details';
+  return null;
+})
 
 import React from 'react'
 
@@ -53,6 +60,7 @@ describe('KanbanBoard', () => {
     jest.clearAllMocks()
     // Mock window.confirm
     window.confirm = jest.fn(() => true)
+    console.log('Mock window.confirm set up:', window.confirm)
   })
 
   it('renders all columns and cards', () => {
@@ -69,7 +77,7 @@ describe('KanbanBoard', () => {
     const user = userEvent.setup()
     render(<KanbanBoard />, { wrapper: TestWrapper })
 
-    const addButtons = screen.getAllByText('+ Add Card')
+    const addButtons = screen.getAllByText('Add Card')
     await user.click(addButtons[0])
 
     expect(screen.getByText('Add New Card')).toBeInTheDocument()
@@ -79,7 +87,7 @@ describe('KanbanBoard', () => {
     const user = userEvent.setup()
     render(<KanbanBoard />, { wrapper: TestWrapper })
 
-    const addButtons = screen.getAllByText('+ Add Card')
+    const addButtons = screen.getAllByText('Add Card')
     await user.click(addButtons[0])
 
     const titleInput = screen.getByPlaceholderText('Enter card title')
