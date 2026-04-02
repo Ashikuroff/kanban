@@ -36,9 +36,12 @@ export function Card({ card, onDeleteCard }: CardProps) {
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onDeleteCard(card.id);
+          if (window.confirm('Are you sure you want to delete this card?')) {
+            onDeleteCard(card.id);
+          }
         }}
         className="mt-2 px-2 py-1 bg-purple-secondary text-white text-xs rounded hover:bg-opacity-80"
+        aria-label={`Delete card: ${card.title}`}
       >
         Delete
       </button>
