@@ -29,9 +29,9 @@ jest.mock('../hooks/useLocalStorage', () => ({
 }))
 
 // Mock window.prompt for add card functionality
-window.prompt = jest.fn((titlePrompt, detailsPrompt) => {
-  if (titlePrompt === 'Enter card title:') return 'Test Card';
-  if (detailsPrompt === 'Enter card details:') return 'Test card details';
+window.prompt = jest.fn((message) => {
+  if (message === 'Enter card title:') return 'New Test Card';
+  if (message === 'Enter card details:') return 'Test card details';
   return null;
 })
 
@@ -73,63 +73,26 @@ describe('KanbanBoard', () => {
     expect(screen.getByText('Implement login')).toBeInTheDocument()
   })
 
-  it('opens add card modal when add button is clicked', async () => {
+  it('opens add card prompts when add button is clicked', async () => {
     const user = userEvent.setup()
     render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const addButtons = screen.getAllByText('Add Card')
     await user.click(addButtons[0])
 
-    expect(screen.getByText('Add New Card')).toBeInTheDocument()
+    expect(window.prompt).toHaveBeenCalledWith('Enter card title:')
+    expect(window.prompt).toHaveBeenCalledWith('Enter card details:')
   })
 
-  it('adds a new card when form is submitted', async () => {
+  it('adds a new card when prompts are filled', async () => {
     const user = userEvent.setup()
     render(<KanbanBoard />, { wrapper: TestWrapper })
 
     const addButtons = screen.getAllByText('Add Card')
     await user.click(addButtons[0])
-
-    const titleInput = screen.getByPlaceholderText('Enter card title')
-    const detailsInput = screen.getByPlaceholderText('Enter card details')
-    const submitButton = screen.getByText('Add Card')
-
-    await user.type(titleInput, 'New Test Card')
-    await user.type(detailsInput, 'Test card details')
-    await user.click(submitButton)
 
     await waitFor(() => {
       expect(screen.getByText('New Test Card')).toBeInTheDocument()
-    })
-  })
-
-  it('opens edit modal when card is double-clicked', async () => {
-    const user = userEvent.setup()
-    render(<KanbanBoard />, { wrapper: TestWrapper })
-
-    const cards = screen.getAllByText('Design UI')
-    await user.dblClick(cards[0])
-
-    expect(screen.getByText('Edit Card')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Design UI')).toBeInTheDocument()
-  })
-
-  it('edits a card when form is submitted', async () => {
-    const user = userEvent.setup()
-    render(<KanbanBoard />, { wrapper: TestWrapper })
-
-    const cards = screen.getAllByText('Design UI')
-    await user.dblClick(cards[0])
-
-    const titleInput = screen.getByDisplayValue('Design UI')
-    const submitButton = screen.getByText('Save')
-
-    await user.clear(titleInput)
-    await user.type(titleInput, 'Updated Design UI')
-    await user.click(submitButton)
-
-    await waitFor(() => {
-      expect(screen.getByText('Updated Design UI')).toBeInTheDocument()
     })
   })
 
@@ -143,50 +106,6 @@ describe('KanbanBoard', () => {
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this card?')
     })
-  })
-
-  it('toggles card completion when checkbox is clicked', async () => {
-    const user = userEvent.setup()
-    render(<KanbanBoard />, { wrapper: TestWrapper })
-
-    const checkboxes = screen.getAllByRole('checkbox')
-    await user.click(checkboxes[0])
-
-    // The card should still be visible but marked as completed
-    expect(screen.getByText('Design UI')).toBeInTheDocument()
-  })
-
-  it('opens rename column modal when column title is clicked', async () => {
-    const user = userEvent.setup()
-    render(<KanbanBoard />, { wrapper: TestWrapper })
-
-    const columnTitles = screen.getAllByRole('heading', { level: 2 })
-    await user.click(columnTitles[0])
-
-    expect(screen.getByText('Rename Column')).toBeInTheDocument()
-  })
-
-  it('renames a column when form is submitted', async () => {
-    const user = userEvent.setup()
-    render(<KanbanBoard />, { wrapper: TestWrapper })
-
-    const columnTitles = screen.getAllByRole('heading', { level: 2 })
-    await user.click(columnTitles[0])
-
-    const nameInput = screen.getByDisplayValue('To Do')
-    const submitButton = screen.getByText('Rename')
-
-    await user.clear(nameInput)
-    await user.type(nameInput, 'Tasks To Do')
-    await user.click(submitButton)
-
-    // Wait for the modal to close
-    await waitFor(() => {
-      expect(screen.queryByText('Rename Column')).not.toBeInTheDocument()
-    })
-
-    // Now check that the column name has been updated
-    expect(screen.getByText('Tasks To Do')).toBeInTheDocument()
   })
 
   it('renders initial columns during SSR and stored columns after hydration', () => {

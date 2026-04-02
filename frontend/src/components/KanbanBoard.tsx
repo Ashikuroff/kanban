@@ -1,6 +1,6 @@
 'use client';
 
-import { useBoard } from '../lib/store.tsx';
+import { useBoard } from '../lib/store';
 import {
   DndContext,
   DragOverEvent,
