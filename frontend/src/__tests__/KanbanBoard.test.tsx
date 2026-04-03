@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import KanbanBoard from '../components/KanbanBoard';
 import { BoardProvider } from '../lib/store';
+import type { BoardState } from '../types';
 
 function renderBoard() {
   return render(
@@ -12,6 +13,10 @@ function renderBoard() {
 }
 
 describe('KanbanBoard', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it('renders the five fixed columns and seeded cards', () => {
     renderBoard();
 
@@ -56,5 +61,34 @@ describe('KanbanBoard', () => {
     await user.click(screen.getByRole('button', { name: 'Delete card Refine onboarding visuals' }));
 
     expect(screen.queryByText('Refine onboarding visuals')).not.toBeInTheDocument();
+  });
+
+  it('loads persisted cards after refresh', async () => {
+    const persistedState: BoardState = {
+      columns: [
+        { id: 'column-1', title: 'Ideas', order: 0 },
+        { id: 'column-2', title: 'Planned', order: 1 },
+        { id: 'column-3', title: 'In Progress', order: 2 },
+        { id: 'column-4', title: 'Review', order: 3 },
+        { id: 'column-5', title: 'Complete', order: 4 },
+      ],
+      cards: [
+        {
+          id: 'card-persisted',
+          title: 'Persisted card',
+          details: 'Should survive a refresh.',
+          columnId: 'column-2',
+          order: 0,
+        },
+      ],
+    };
+
+    window.localStorage.setItem('kanban-board', JSON.stringify(persistedState));
+
+    renderBoard();
+
+    await waitFor(() => {
+      expect(screen.getByText('Persisted card')).toBeInTheDocument();
+    });
   });
 });

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext } from 'react';
 import type { BoardAction, BoardState, Card } from '../types';
 import { generateId } from '../types';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export const initialState: BoardState = {
   columns: [
@@ -165,7 +166,14 @@ const BoardContext = createContext<{
 } | null>(null);
 
 export function BoardProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(boardReducer, initialState);
+  const [state, setState] = useLocalStorage<BoardState>('kanban-board', initialState);
+
+  const dispatch = React.useCallback(
+    (action: BoardAction) => {
+      setState((currentState) => boardReducer(currentState, action));
+    },
+    [setState]
+  );
 
   return <BoardContext.Provider value={{ state, dispatch }}>{children}</BoardContext.Provider>;
 }
