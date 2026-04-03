@@ -1,50 +1,71 @@
-import { Card as CardType } from '../types';
-import { useDraggable } from '@dnd-kit/core';
+'use client';
+
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { Card as CardType } from '../types';
 
 interface CardProps {
   card: CardType;
-  onDeleteCard: (cardId: string) => void;
+  onDeleteCard?: (cardId: string) => void;
+  isOverlay?: boolean;
 }
 
-export function Card({ card, onDeleteCard }: CardProps) {
+export function Card({ card, onDeleteCard, isOverlay = false }: CardProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
+    transition,
     isDragging,
-  } = useDraggable({
+  } = useSortable({
     id: card.id,
+    data: {
+      type: 'card',
+      cardId: card.id,
+      columnId: card.columnId,
+    },
+    disabled: isOverlay,
   });
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`border rounded p-3 bg-white shadow-sm cursor-grab active:cursor-grabbing ${
-        isDragging ? 'opacity-50' : ''
-      }`}
+    <article
+      ref={isOverlay ? undefined : setNodeRef}
+      style={isOverlay ? undefined : style}
+      className={`rounded-3xl border border-white/70 bg-white px-4 py-4 shadow-[0_18px_45px_rgba(3,33,71,0.12)] transition ${
+        isDragging ? 'opacity-40' : 'opacity-100'
+      } ${isOverlay ? 'rotate-1 shadow-[0_28px_60px_rgba(3,33,71,0.22)]' : ''}`}
     >
-      <h3 className="font-medium">{card.title}</h3>
-      <p className="text-gray-600 mt-1">{card.details}</p>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          if (window.confirm('Are you sure you want to delete this card?')) {
-            onDeleteCard(card.id);
-          }
-        }}
-        className="mt-2 px-2 py-1 bg-purple-secondary text-white text-xs rounded hover:bg-opacity-80"
-        aria-label={`Delete card: ${card.title}`}
-      >
-        Delete
-      </button>
-    </div>
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-[#d7dfeb] bg-[#f4f7fb] text-lg text-[#032147] transition hover:border-[#209dd7] hover:bg-white"
+          aria-label={`Drag card ${card.title}`}
+          {...attributes}
+          {...listeners}
+        >
+          <span aria-hidden="true">⋮⋮</span>
+        </button>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold tracking-[0.01em] text-[#032147]">{card.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-[#5b6881]">{card.details}</p>
+        </div>
+        {onDeleteCard ? (
+          <button
+            type="button"
+            onClick={() => onDeleteCard(card.id)}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#888888] transition hover:bg-[#fff5d8] hover:text-[#032147]"
+            aria-label={`Delete card ${card.title}`}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        ) : null}
+      </div>
+    </article>
   );
 }
