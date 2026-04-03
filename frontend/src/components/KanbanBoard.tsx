@@ -1,104 +1,184 @@
 'use client';
 
-import { useBoard } from '../lib/store.tsx';
+import { useState } from 'react';
 import {
+  closestCorners,
   DndContext,
-  DragOverEvent,
+  DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  DragEndEvent,
-  closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import {
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Column } from './Column';
 import { Card } from './Card';
+import { useBoard } from '../lib/store';
 
 export default function KanbanBoard() {
   const { state, dispatch } = useBoard();
-
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
-    // For now, we don't need to track active card during drag
-    // This will be enhanced in Phase 2 with drag and drop
-  };
+  const sortedColumns = [...state.columns].sort((left, right) => left.order - right.order);
+  const activeCard = activeCardId
+    ? state.cards.find((card) => card.id === activeCardId) ?? null
+    : null;
 
-  const handleDragOver = (event: DragOverEvent) => {
-    // handleDragOver can be used for visual feedback during drag
-    // but the actual move logic will be in handleDragEnd
+  const getColumnCards = (columnId: string) =>
+    state.cards
+      .filter((card) => card.columnId === columnId)
+      .sort((left, right) => left.order - right.order);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveCardId(String(event.active.id));
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveCardId(null);
+
     const { active, over } = event;
-
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    // Check if we're dropping on a column
-    const isOverColumn = state.columns.some(col => col.id === overId);
-    const isOverCard = state.cards.some(card => card.id === overId);
-
-    if (isOverColumn) {
-      // Dropping on a column - move to the end of that column
-      const targetColumnId = overId;
-      const cardsInTargetColumn = state.cards.filter(card => card.columnId === targetColumnId);
-      const newIndex = cardsInTargetColumn.length;
-
-      dispatch({
-        type: 'MOVE_CARD',
-        payload: { cardId: activeId, newColumnId: targetColumnId, newIndex }
-      });
-    } else if (isOverCard) {
-      // Dropping on a card - insert at that position
-      const overCard = state.cards.find(card => card.id === overId);
-      if (!overCard) return;
-
-      const targetColumnId = overCard.columnId;
-      const cardsInTargetColumn = state.cards.filter(card => card.columnId === targetColumnId);
-      const overIndex = cardsInTargetColumn.findIndex(card => card.id === overId);
-
-      dispatch({
-        type: 'MOVE_CARD',
-        payload: { cardId: activeId, newColumnId: targetColumnId, newIndex: overIndex }
-      });
+    if (!over) {
+      return;
     }
+
+    const activeCardId = String(active.id);
+    const activeCard = state.cards.find((card) => card.id === activeCardId);
+    if (!activeCard) {
+      return;
+    }
+
+    const overData = over.data.current as
+      | { type: 'card'; cardId: string; columnId: string }
+      | { type: 'column'; columnId: string }
+      | undefined;
+
+    if (!overData) {
+      return;
+    }
+
+    if (overData.type === 'column') {
+      dispatch({
+        type: 'MOVE_CARD',
+        payload: {
+          cardId: activeCardId,
+          targetColumnId: overData.columnId,
+          targetIndex: getColumnCards(overData.columnId).length,
+        },
+      });
+      return;
+    }
+
+    const targetColumnCards = getColumnCards(overData.columnId);
+    const overIndex = targetColumnCards.findIndex((card) => card.id === overData.cardId);
+    if (overIndex === -1) {
+      return;
+    }
+
+    const sameCard = activeCardId === overData.cardId;
+    if (sameCard) {
+      return;
+    }
+
+    dispatch({
+      type: 'MOVE_CARD',
+      payload: {
+        cardId: activeCardId,
+        targetColumnId: overData.columnId,
+        targetIndex: overIndex,
+      },
+    });
   };
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-dark-navy mb-4">Kanban Board</h1>
-        <div className="grid gap-4 md:grid-cols-5">
-          {state.columns.map(column => (
+      <div className="mx-auto max-w-[1680px] px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/60 bg-[linear-gradient(135deg,rgba(3,33,71,0.96),rgba(32,157,215,0.88))] p-6 text-white shadow-[0_30px_80px_rgba(3,33,71,0.28)] sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs uppercase tracking-[0.3em] text-[#ecad0a]">Single Board MVP</p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-5xl">
+                A focused Kanban board with no extra workflow noise.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/80 sm:text-base">
+                Rename columns, add cards, remove what no longer matters, and move work across a clean
+                five-stage flow.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
+                <div className="text-2xl font-semibold">{state.columns.length}</div>
+                <div className="text-white/70">Fixed lanes</div>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
+                <div className="text-2xl font-semibold">{state.cards.length}</div>
+                <div className="text-white/70">Open cards</div>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 col-span-2 sm:col-span-1">
+                <div className="text-2xl font-semibold">Live</div>
+                <div className="text-white/70">Client-side only</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-5">
+          {sortedColumns.map((column) => (
             <Column
               key={column.id}
               column={column}
-              cards={state.cards.filter(card => card.columnId === column.id)}
-              onAddCard={(title, details) => dispatch({ type: 'ADD_CARD', payload: { title, details, columnId: column.id } })}
-              onDeleteCard={(cardId) => dispatch({ type: 'DELETE_CARD', payload: cardId })}
+              cards={getColumnCards(column.id)}
+              onAddCard={(title, details) =>
+                dispatch({
+                  type: 'ADD_CARD',
+                  payload: {
+                    columnId: column.id,
+                    title,
+                    details,
+                  },
+                })
+              }
+              onDeleteCard={(cardId) =>
+                dispatch({
+                  type: 'DELETE_CARD',
+                  payload: {
+                    cardId,
+                  },
+                })
+              }
+              onRenameColumn={(title) =>
+                dispatch({
+                  type: 'RENAME_COLUMN',
+                  payload: {
+                    columnId: column.id,
+                    title,
+                  },
+                })
+              }
             />
           ))}
         </div>
       </div>
+
+      <DragOverlay>
+        {activeCard ? <Card card={activeCard} isOverlay /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }

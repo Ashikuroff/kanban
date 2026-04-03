@@ -17,6 +17,37 @@ export interface BoardState {
   cards: Card[];
 }
 
-export function generateId(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+export type BoardAction =
+  | {
+      type: 'ADD_CARD';
+      payload: {
+        columnId: string;
+        title: string;
+        details: string;
+      };
+    }
+  | {
+      type: 'DELETE_CARD';
+      payload: {
+        cardId: string;
+      };
+    }
+  | {
+      type: 'MOVE_CARD';
+      payload: {
+        cardId: string;
+        targetColumnId: string;
+        targetIndex: number;
+      };
+    }
+  | {
+      type: 'RENAME_COLUMN';
+      payload: {
+        columnId: string;
+        title: string;
+      };
+    };
+
+export function generateId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }

@@ -4,10 +4,9 @@ import { useState } from 'react';
 
 interface AddCardFormProps {
   onAddCard: (title: string, details: string) => void;
-  placeholder?: string;
 }
 
-export function AddCardForm({ onAddCard, placeholder = 'Add a card...' }: AddCardFormProps) {
+export function AddCardForm({ onAddCard }: AddCardFormProps) {
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
 
