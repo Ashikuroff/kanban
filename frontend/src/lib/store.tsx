@@ -1,105 +1,181 @@
 'use client';
 
 import React, { createContext, useContext, useReducer } from 'react';
-import type { BoardState, Column, Card } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import type { BoardAction, BoardState, Card } from '../types';
+import { generateId } from '../types';
 
 export const initialState: BoardState = {
   columns: [
-    { id: '1', title: 'To Do', order: 0 },
-    { id: '2', title: 'In Progress', order: 1 },
-    { id: '3', title: 'Review', order: 2 },
-    { id: '4', title: 'Done', order: 3 },
-    { id: '5', title: 'Archived', order: 4 }
+    { id: 'column-1', title: 'Ideas', order: 0 },
+    { id: 'column-2', title: 'Planned', order: 1 },
+    { id: 'column-3', title: 'In Progress', order: 2 },
+    { id: 'column-4', title: 'Review', order: 3 },
+    { id: 'column-5', title: 'Complete', order: 4 },
   ],
   cards: [
-    { id: '1-1', title: 'Design UI', details: 'Create wireframes for the new feature', columnId: '1', order: 0 },
-    { id: '1-2', title: 'Write tests', details: 'Unit tests for the API endpoints', columnId: '1', order: 1 },
-    { id: '2-1', title: 'Implement login', details: 'Add authentication to the app', columnId: '2', order: 0 }
-  ]
+    {
+      id: 'card-1',
+      title: 'Refine onboarding visuals',
+      details: 'Tighten the hero copy, refine button hierarchy, and align the empty states.',
+      columnId: 'column-1',
+      order: 0,
+    },
+    {
+      id: 'card-2',
+      title: 'Map launch checklist',
+      details: 'Capture the MVP release steps, owners, and acceptance criteria for handoff.',
+      columnId: 'column-2',
+      order: 0,
+    },
+    {
+      id: 'card-3',
+      title: 'Build drag interactions',
+      details: 'Polish card motion and drop feedback so moving work feels deliberate and fast.',
+      columnId: 'column-3',
+      order: 0,
+    },
+    {
+      id: 'card-4',
+      title: 'Review copy tone',
+      details: 'Check labels and helper text so the board stays concise and consistent.',
+      columnId: 'column-4',
+      order: 0,
+    },
+    {
+      id: 'card-5',
+      title: 'Prepare stakeholder demo',
+      details: 'Seed the board with realistic sample work for the initial walkthrough.',
+      columnId: 'column-5',
+      order: 0,
+    },
+  ],
 };
 
-export function boardReducer(state: BoardState, action: any): BoardState {
+function normalizeColumnCards(cards: Card[], columnId: string): Card[] {
+  return cards
+    .filter((card) => card.columnId === columnId)
+    .sort((left, right) => left.order - right.order)
+    .map((card, index) => ({ ...card, order: index }));
+}
+
+function mergeColumns(baseCards: Card[], updates: Card[][]): Card[] {
+  const updatedColumnIds = new Set(updates.flat().map((card) => card.columnId));
+  const untouched = baseCards.filter((card) => !updatedColumnIds.has(card.columnId));
+
+  return [...untouched, ...updates.flat()].sort((left, right) => {
+    if (left.columnId === right.columnId) {
+      return left.order - right.order;
+    }
+
+    return left.columnId.localeCompare(right.columnId);
+  });
+}
+
+export function boardReducer(state: BoardState, action: BoardAction): BoardState {
   switch (action.type) {
-    case 'ADD_CARD':
-      const newCard = {
-        id: `${action.payload.columnId}-${Date.now()}`, // Simple ID generation for MVP
-        title: action.payload.title,
-        details: action.payload.details,
+    case 'ADD_CARD': {
+      const cardsInColumn = normalizeColumnCards(state.cards, action.payload.columnId);
+      const newCard: Card = {
+        id: generateId('card'),
+        title: action.payload.title.trim(),
+        details: action.payload.details.trim(),
         columnId: action.payload.columnId,
-        order: state.cards
-          .filter(card => card.columnId === action.payload.columnId)
-          .length
+        order: cardsInColumn.length,
       };
+
       return {
         ...state,
-        cards: [...state.cards, newCard]
+        cards: [...state.cards, newCard],
       };
+    }
 
-    case 'DELETE_CARD':
+    case 'DELETE_CARD': {
+      const cardToDelete = state.cards.find((card) => card.id === action.payload.cardId);
+      if (!cardToDelete) {
+        return state;
+      }
+
+      const remainingCards = state.cards.filter((card) => card.id !== action.payload.cardId);
+
       return {
         ...state,
-        cards: state.cards.filter(card => card.id !== action.payload)
+        cards: mergeColumns(remainingCards, [normalizeColumnCards(remainingCards, cardToDelete.columnId)]),
       };
+    }
 
-    case 'MOVE_CARD':
-      const { cardId, newColumnId, newIndex } = action.payload;
-      const cardToMove = state.cards.find(card => card.id === cardId);
-      if (!cardToMove) return state;
+    case 'MOVE_CARD': {
+      const cardToMove = state.cards.find((card) => card.id === action.payload.cardId);
+      if (!cardToMove) {
+        return state;
+      }
 
-      // Remove card from current position
-      const filteredCards = state.cards.filter(card => card.id !== cardId);
+      const targetColumnId = action.payload.targetColumnId;
+      const sourceColumnId = cardToMove.columnId;
+      const remainingCards = state.cards.filter((card) => card.id !== action.payload.cardId);
+      const sourceCards = normalizeColumnCards(remainingCards, sourceColumnId);
+      const targetCardsBase =
+        sourceColumnId === targetColumnId
+          ? sourceCards
+          : normalizeColumnCards(remainingCards, targetColumnId);
 
-      // Update card's column and order
-      const updatedCard = { ...cardToMove, columnId: newColumnId, order: newIndex };
-
-      // Insert card at new position
-      const cardsInNewColumn = filteredCards.filter(card => card.columnId === newColumnId);
-      const updatedCardsInNewColumn = [
-        ...cardsInNewColumn.slice(0, newIndex),
-        updatedCard,
-        ...cardsInNewColumn.slice(newIndex)
-      ];
-
-      // Update order for all cards in the new column
-      const finalCardsInNewColumn = updatedCardsInNewColumn.map((card, index) => ({
+      const boundedIndex = Math.max(0, Math.min(action.payload.targetIndex, targetCardsBase.length));
+      const movedCard: Card = {
+        ...cardToMove,
+        columnId: targetColumnId,
+        order: boundedIndex,
+      };
+      const targetCards = [
+        ...targetCardsBase.slice(0, boundedIndex),
+        movedCard,
+        ...targetCardsBase.slice(boundedIndex),
+      ].map((card, index) => ({
         ...card,
-        order: index
+        order: index,
       }));
 
-      // Combine with cards from other columns
-      const otherCards = filteredCards.filter(card => card.columnId !== newColumnId);
+      const columnsToUpdate =
+        sourceColumnId === targetColumnId ? [targetCards] : [sourceCards, targetCards];
 
       return {
         ...state,
-        cards: [...otherCards, ...finalCardsInNewColumn]
+        cards: mergeColumns(remainingCards, columnsToUpdate),
       };
+    }
 
-    default:
+    case 'RENAME_COLUMN': {
+      return {
+        ...state,
+        columns: state.columns.map((column) =>
+          column.id === action.payload.columnId
+            ? { ...column, title: action.payload.title.trim() || column.title }
+            : column
+        ),
+      };
+    }
+
+    default: {
       return state;
+    }
   }
 }
 
-const BoardContext = createContext<{ state: BoardState; dispatch: React.Dispatch<any> } | null>(null);
+const BoardContext = createContext<{
+  state: BoardState;
+  dispatch: React.Dispatch<BoardAction>;
+} | null>(null);
 
 export function BoardProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useLocalStorage<BoardState>('kanban-board', initialState);
+  const [state, dispatch] = useReducer(boardReducer, initialState);
 
-  const dispatch = (action: any) => {
-    setState(currentState => boardReducer(currentState, action));
-  };
-
-  return (
-    <BoardContext.Provider value={{ state: state, dispatch: dispatch }}>
-      {children}
-    </BoardContext.Provider>
-  );
+  return <BoardContext.Provider value={{ state, dispatch }}>{children}</BoardContext.Provider>;
 }
 
 export function useBoard() {
   const context = useContext(BoardContext);
+
   if (!context) {
     throw new Error('useBoard must be used within a BoardProvider');
   }
+
   return context;
 }
