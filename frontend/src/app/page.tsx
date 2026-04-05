@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '../lib/auth';
-import KanbanBoard from '../components/KanbanBoard';
+import { KanbanBoard } from '../components/KanbanBoard';
 import { AuthForm } from '../components/AuthForm';
 
 export default function Home() {

@@ -4,6 +4,12 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../lib/auth';
 import { useActiveBoard } from '../hooks/useActiveBoard';
 import { ProfileModal } from './ProfileModal';
+import { Modal } from './Modal';
+
+interface ConfirmDialog {
+  message: string;
+  onConfirm: () => void;
+}
 
 export function UserMenu() {
   const { state: authState, logout, shareBoard, unshareBoard } = useAuth();
@@ -16,6 +22,7 @@ export function UserMenu() {
   const [shareSuccess, setShareSuccess] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const shareInputRef = useRef<HTMLInputElement>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
   const user = authState.user;
   const isBoardShared = activeOwner && activeOwner !== user?.username;
@@ -100,9 +107,10 @@ export function UserMenu() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm(`Stop sharing with ${board.owner}?`)) {
-                          handleUnshare(board.owner);
-                        }
+                        setConfirmDialog({
+                          message: `Stop sharing with ${board.owner}?`,
+                          onConfirm: () => handleUnshare(board.owner),
+                        });
                       }}
                       className="text-xs text-red-500 hover:text-red-700"
                     >
@@ -151,10 +159,13 @@ export function UserMenu() {
             </button>
             <button
               onClick={() => {
-                if (confirm('Are you sure you want to logout?')) {
-                  logout();
-                }
-                setIsOpen(false);
+                setConfirmDialog({
+                  message: 'Are you sure you want to logout?',
+                  onConfirm: () => {
+                    logout();
+                    setIsOpen(false);
+                  },
+                });
               }}
               className="text-sm text-red-600 hover:underline"
             >
@@ -166,6 +177,29 @@ export function UserMenu() {
 
       {showProfile && (
         <ProfileModal onClose={() => setShowProfile(false)} />
+      )}
+
+      {confirmDialog && (
+        <Modal isOpen={!!confirmDialog} onClose={() => setConfirmDialog(null)} title="Confirm">
+          <p className="mb-6 text-sm text-gray-600">{confirmDialog.message}</p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setConfirmDialog(null)}
+              className="rounded-xl border border-[#d7dfeb] px-4 py-2 text-sm text-[#032147]/70 hover:bg-[#d7dfeb]/20"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                confirmDialog.onConfirm();
+                setConfirmDialog(null);
+              }}
+              className="rounded-xl bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+            >
+              Confirm
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

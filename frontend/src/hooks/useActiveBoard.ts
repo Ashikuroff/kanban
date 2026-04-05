@@ -33,8 +33,6 @@ export function useActiveBoard() {
       localStorage.removeItem(`kanban-active-board-${user.username}`);
     }
     setActiveOwner(owner);
-    // Reload to apply board change
-    window.location.reload();
   }, [user]);
 
   const availableBoards = useMemo<BoardInfo[]>(() => {

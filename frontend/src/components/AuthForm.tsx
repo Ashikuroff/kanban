@@ -12,6 +12,7 @@ export function AuthForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localSuccess, setLocalSuccess] = useState<string | null>(null);
   const [resetStep, setResetStep] = useState<'idle' | 'request' | 'verify'>('idle');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -102,8 +103,8 @@ export function AuthForm() {
       setResetToken('');
       setNewPassword('');
       setConfirmNewPassword('');
-      // Could auto-login or show success message
-      alert('Password reset successful! You can now log in with your new password.');
+      setLocalError(null);
+      setLocalSuccess('Password reset successful! You can now log in with your new password.');
       setIsLoginMode(true);
     } else {
       setLocalError(result.error || 'Reset failed');
@@ -143,6 +144,7 @@ export function AuthForm() {
   }
 
   const errorToShow = localError || state.error;
+  const successToShow = localSuccess || undefined;
 
   const renderLoginForm = () => (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -434,6 +436,12 @@ export function AuthForm() {
           {errorToShow && (
             <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 border border-red-200 animate-fade-in">
               {errorToShow}
+            </div>
+          )}
+
+          {successToShow && (
+            <div className="mb-6 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-600 border border-green-200 animate-fade-in">
+              {successToShow}
             </div>
           )}
 

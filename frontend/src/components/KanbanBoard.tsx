@@ -18,7 +18,7 @@ import { Card } from './Card';
 import { useBoard } from '../lib/store';
 import { UserMenu } from './UserMenu';
 
-export default function KanbanBoard() {
+export function KanbanBoard() {
   const { state, dispatch } = useBoard();
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -165,6 +165,24 @@ export default function KanbanBoard() {
                   type: 'DELETE_CARD',
                   payload: {
                     cardId,
+                  },
+                })
+              }
+              onEditCard={(cardId, title, details) =>
+                dispatch({
+                  type: 'EDIT_CARD',
+                  payload: {
+                    cardId,
+                    title,
+                    details,
+                  },
+                })
+              }
+              onDeleteColumn={(columnId) =>
+                dispatch({
+                  type: 'DELETE_COLUMN',
+                  payload: {
+                    columnId,
                   },
                 })
               }
