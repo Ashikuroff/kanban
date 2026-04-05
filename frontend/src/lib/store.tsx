@@ -156,6 +156,26 @@ export function boardReducer(state: BoardState, action: BoardAction): BoardState
       };
     }
 
+    case 'EDIT_CARD': {
+      return {
+        ...state,
+        cards: state.cards.map((card) =>
+          card.id === action.payload.cardId
+            ? { ...card, title: action.payload.title.trim(), details: action.payload.details.trim() }
+            : card
+        ),
+      };
+    }
+
+    case 'DELETE_COLUMN': {
+      const { columnId } = action.payload;
+      return {
+        ...state,
+        columns: state.columns.filter((column) => column.id !== columnId),
+        cards: state.cards.filter((card) => card.columnId !== columnId),
+      };
+    }
+
     default: {
       return state;
     }

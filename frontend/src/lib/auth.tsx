@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import { getAuthService } from './authService';
 
 export interface User {
@@ -130,24 +130,39 @@ const CURRENT_VERSION = 2;
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(authReducer, initialState);
   const service = useMemo(() => getAuthService(), []);
+  const sessionExpiryRef = useRef<null | number>(null);
 
   useEffect(() => {
-    // Migration: Clear corrupted user data from buggy password hashing (version 1)
+    sessionExpiryRef.current = state.sessionExpiresAt;
+  }, [state.sessionExpiresAt]);
+
+  useEffect(() => {
+    // Migration: Handle storage version upgrades more gracefully
     const storedVersion = parseInt(localStorage.getItem(STORAGE_VERSION_KEY) || '0', 10);
     if (storedVersion < CURRENT_VERSION) {
-      console.log('Running storage migration: clearing corrupted user data');
-      // Clear user credentials (they may be corrupted)
-      localStorage.removeItem('kanban-users-v2');
-      localStorage.removeItem('kanban-reset-tokens');
+      console.log('Running storage migration from version', storedVersion, 'to', CURRENT_VERSION);
+
+      // For version 1 to 2: Instead of clearing all data, we'll preserve users but mark them as needing re-verification
+      if (storedVersion === 1) {
+        console.log('Migration: Preserving existing users but requiring re-authentication for security');
+        // Clear auth tokens but keep user data - users will need to login again
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        sessionStorage.removeItem(AUTH_STORAGE_KEY);
+        // Keep user data and reset tokens - they can still reset passwords if needed
+      }
+
       localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION.toString());
-      console.log('Migration complete. Users can re-register or reset passwords.');
+      console.log('Migration complete. Users may need to log in again.');
     }
 
-    // Handle inactivity tracking
+    // Handle inactivity tracking (debounced to max once per 60s)
+    let lastActivityWrite = 0;
     const updateActivity = () => {
-      if (state.sessionExpiresAt) {
-        localStorage.setItem(SESSION_ACTIVITY_KEY, Date.now().toString());
-      }
+      if (!sessionExpiryRef.current) return;
+      const now = Date.now();
+      if (now - lastActivityWrite < 60_000) return;
+      lastActivityWrite = now;
+      localStorage.setItem(SESSION_ACTIVITY_KEY, now.toString());
     };
 
     window.addEventListener('mousemove', updateActivity);
@@ -186,10 +201,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Check if we migrated and inform user (only client-side)
-    if (storedVersion < CURRENT_VERSION) {
+    if (storedVersion < CURRENT_VERSION && typeof window !== 'undefined') {
       // Show a one-time info message about the update
       setTimeout(() => {
-        alert('Storage migration: If you had an existing account, please use "Forgot password?" to reset it, or create a new account.');
+        alert('App updated! Please log in again with your existing account, or use "Forgot password?" if needed.');
       }, 500);
     }
 
@@ -206,7 +221,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!state.sessionExpiresAt || !state.isAuthenticated) return;
 
     const checkExpiry = () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       const currentExpiry = state.sessionExpiresAt;
       if (currentExpiry && Date.now() > currentExpiry) {
         service.logout();

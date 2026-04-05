@@ -46,6 +46,20 @@ export type BoardAction =
         columnId: string;
         title: string;
       };
+    }
+  | {
+      type: 'EDIT_CARD';
+      payload: {
+        cardId: string;
+        title: string;
+        details: string;
+      };
+    }
+  | {
+      type: 'DELETE_COLUMN';
+      payload: {
+        columnId: string;
+      };
     };
 
 export function generateId(prefix: string): string {

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import KanbanBoard from '../components/KanbanBoard';
+import { KanbanBoard } from '../components/KanbanBoard';
 import { BoardProvider } from '../lib/store';
 import { AuthProvider } from '../lib/auth';
 import type { BoardState } from '../types';
@@ -18,7 +18,6 @@ function renderBoard() {
 describe('KanbanBoard', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    // Set authenticated user in localStorage
     window.localStorage.setItem(
       'kanban-auth',
       JSON.stringify({ user: { username: 'admin' } })

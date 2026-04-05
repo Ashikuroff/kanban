@@ -5,12 +5,15 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core';
 import type { Card as CardType, Column as ColumnType } from '../types';
 import { Card } from './Card';
+import { Modal } from './Modal';
 
 interface ColumnProps {
   column: ColumnType;
   cards: CardType[];
   onAddCard: (title: string, details: string) => void;
   onDeleteCard: (cardId: string) => void;
+  onEditCard: (cardId: string, title: string, details: string) => void;
+  onDeleteColumn: (columnId: string) => void;
   onRenameColumn: (title: string) => void;
 }
 
@@ -19,9 +22,12 @@ export function Column({
   cards,
   onAddCard,
   onDeleteCard,
+  onEditCard,
+  onDeleteColumn,
   onRenameColumn,
 }: ColumnProps) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const { setNodeRef, isOver } = useDroppable({
@@ -91,7 +97,16 @@ export function Column({
             {cards.length} {cards.length === 1 ? 'card' : 'cards'}
           </p>
         </div>
-        <div className="h-10 w-2 rounded-full bg-[#ecad0a]" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={() => setIsDeleteConfirmOpen(true)}
+          className="shrink-0 rounded-lg p-1.5 text-[#888888] transition hover:bg-red-50 hover:text-red-600"
+          aria-label={`Delete column ${column.title}`}
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </div>
 
       <div
@@ -105,7 +120,7 @@ export function Column({
         <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-3">
             {cards.map((card) => (
-              <Card key={card.id} card={card} onDeleteCard={onDeleteCard} />
+              <Card key={card.id} card={card} onDeleteCard={onDeleteCard} onEditCard={onEditCard} />
             ))}
           </div>
         </SortableContext>
@@ -175,6 +190,33 @@ export function Column({
           </button>
         )}
       </div>
+
+      {isDeleteConfirmOpen && (
+        <Modal isOpen={true} onClose={() => setIsDeleteConfirmOpen(false)} title="Delete Column">
+          <p className="mb-6 text-sm text-[#5b6881]">
+            Delete &ldquo;{column.title}&rdquo;? This will also remove its {cards.length} card{cards.length !== 1 ? 's' : ''}.
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              className="rounded-xl border border-[#d7dfeb] px-4 py-2 text-sm text-[#032147]/70 hover:bg-[#d7dfeb]/20"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onDeleteColumn(column.id);
+                setIsDeleteConfirmOpen(false);
+              }}
+              className="rounded-xl bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }
