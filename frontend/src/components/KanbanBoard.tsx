@@ -16,6 +16,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Column } from './Column';
 import { Card } from './Card';
 import { useBoard } from '../lib/store';
+import { UserMenu } from './UserMenu';
 
 export default function KanbanBoard() {
   const { state, dispatch } = useBoard();
@@ -109,7 +110,7 @@ export default function KanbanBoard() {
       onDragEnd={handleDragEnd}
     >
       <div className="mx-auto max-w-[1680px] px-4 pb-10 sm:px-6 lg:px-8">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/60 bg-[linear-gradient(135deg,rgba(3,33,71,0.96),rgba(32,157,215,0.88))] p-6 text-white shadow-[0_30px_80px_rgba(3,33,71,0.28)] sm:p-8">
+        <div className="mb-8 rounded-[2rem] border border-white/60 bg-[linear-gradient(135deg,rgba(3,33,71,0.96),rgba(32,157,215,0.88))] p-6 text-white shadow-[0_30px_80px_rgba(3,33,71,0.28)] sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs uppercase tracking-[0.3em] text-[#ecad0a]">Single Board MVP</p>
@@ -121,18 +122,23 @@ export default function KanbanBoard() {
                 five-stage flow.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-                <div className="text-2xl font-semibold">{state.columns.length}</div>
-                <div className="text-white/70">Fixed lanes</div>
+            <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-end sm:gap-6">
+              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 sm:gap-3">
+                <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
+                  <div className="text-2xl font-semibold">{state.columns.length}</div>
+                  <div className="text-white/70">Fixed lanes</div>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
+                  <div className="text-2xl font-semibold">{state.cards.length}</div>
+                  <div className="text-white/70">Open cards</div>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 col-span-2 sm:col-span-1">
+                  <div className="text-2xl font-semibold">Live</div>
+                  <div className="text-white/70">Client-side only</div>
+                </div>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-                <div className="text-2xl font-semibold">{state.cards.length}</div>
-                <div className="text-white/70">Open cards</div>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 col-span-2 sm:col-span-1">
-                <div className="text-2xl font-semibold">Live</div>
-                <div className="text-white/70">Client-side only</div>
+              <div className="text-sm">
+                <UserMenu />
               </div>
             </div>
           </div>

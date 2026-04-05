@@ -2,19 +2,27 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import KanbanBoard from '../components/KanbanBoard';
 import { BoardProvider } from '../lib/store';
+import { AuthProvider } from '../lib/auth';
 import type { BoardState } from '../types';
 
 function renderBoard() {
   return render(
-    <BoardProvider>
-      <KanbanBoard />
-    </BoardProvider>
+    <AuthProvider>
+      <BoardProvider>
+        <KanbanBoard />
+      </BoardProvider>
+    </AuthProvider>
   );
 }
 
 describe('KanbanBoard', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    // Set authenticated user in localStorage
+    window.localStorage.setItem(
+      'kanban-auth',
+      JSON.stringify({ user: { username: 'admin' } })
+    );
   });
 
   it('renders the five fixed columns and seeded cards', () => {

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { BoardProvider } from '../lib/store';
+import { AuthProvider } from '../lib/auth';
 
 export const metadata: Metadata = {
   title: 'Kanban Board MVP',
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full bg-[#edf2f8] antialiased">
       <body className="min-h-full text-[#032147]">
-        <BoardProvider>{children}</BoardProvider>
+        <AuthProvider>
+          <BoardProvider>{children}</BoardProvider>
+        </AuthProvider>
       </body>
     </html>
   );
