@@ -1,9 +1,11 @@
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import type { BoardAction, BoardState, Card } from '../types';
 import { generateId } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useAuth } from './auth';
+import { useActiveBoard } from '../hooks/useActiveBoard';
 
 export const initialState: BoardState = {
   columns: [
@@ -166,7 +168,19 @@ const BoardContext = createContext<{
 } | null>(null);
 
 export function BoardProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useLocalStorage<BoardState>('kanban-board', initialState);
+  const { state: authState } = useAuth();
+  const { activeOwner } = useActiveBoard();
+
+  // Determine which board owner to use: active (shared) if set, otherwise own user
+  const boardOwner = activeOwner || authState.user?.username || null;
+  const storageKey = useMemo(() => {
+    if (boardOwner) {
+      return `kanban-board-${boardOwner}`;
+    }
+    return 'kanban-board';
+  }, [boardOwner]);
+
+  const [state, setState] = useLocalStorage<BoardState>(storageKey, initialState);
 
   const dispatch = React.useCallback(
     (action: BoardAction) => {
